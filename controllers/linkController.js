@@ -4,8 +4,8 @@ const Link = require('../models/Link');
 exports.createLink = async (req, res) => {
     const { originalUrl } = req.body;
     const { targetParamName } = req.body;
-    console.log(originalUrl);
-    const link = new Link({ originalUrl, targetParamName });
+    const { targetValues } = req.body;
+    const link = new Link({ originalUrl, targetParamName, targetValues });
     await link.save();
     res.status(201).send(link);
 };
@@ -48,14 +48,40 @@ exports.redirectLink = async (req, res) => {
 
     // בדיקה ועיבוד של פרמטר ה-target ב-query string
     const targetParamName = link.targetParamName;
-    console.log(targetParamName);
     const targetParamValue = req.query[targetParamName] || '';
 
     // הוספת קליק
     link.clicks.push({ ipAddress: req.ip, targetParamValue });
     await link.save();
 
-    res.send(link.originalUrl);
-    //  res.redirect(link.originalUrl)
+    //res.send(link.originalUrl);
+    res.redirect(301, link.originalUrl)
 }
+
+exports.getLinkClicks = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const link = await Link.findById(id);
+        if (!link)
+            return res.status(404).send({ message: 'Link not found' });
+        const groupedClicks = {};
+        for (let click of link.clicks)
+            if (click.targetParamValue !== "")
+                if (groupedClicks[click.targetParamValue] != undefined)
+                    groupedClicks[click.targetParamValue]++;
+                else
+                    groupedClicks[click.targetParamValue] = 1;
+        const groupedClicksNames = {};
+        for (let click of link.targetValues) {
+            groupedClicksNames[click.name] = groupedClicks[click.value]
+        }
+        return res.json({ clicks: groupedClicksNames });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+
 

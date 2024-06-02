@@ -16,4 +16,6 @@ router.delete('/links/:id', linkController.deleteLink);
 
 router.get('/links/redirect/:id', linkController.redirectLink)
 
+router.get('/links/:id/clicks', linkController.getLinkClicks)
+
 module.exports = router;
